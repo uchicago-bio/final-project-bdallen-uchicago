@@ -4,7 +4,6 @@ import os
 import argparse
 import itertools
 import random
-import subprocess
 import urllib
 import multiprocessing
 import math
@@ -15,6 +14,7 @@ from pdbremix.data import res_name_to_char
 import _pathfix
 
 from binf.conserved_residues import iter_residues_for_conserved_alignment
+from binf.pymol_batch import run_pymol_script
 
 PDB_SITE = "http://www.rcsb.org/pdb/files"
 
@@ -457,25 +457,6 @@ png %(outpath)s
 """ % data
 
     return run_pymol_script(script)
-
-
-def run_pymol_script(script):
-    p = subprocess.Popen(["pymol", "-cpq"],
-                         stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
-    stdout, stderr = p.communicate(script)
-    if p.returncode != 0:
-        raise PymolError(p.returncode, stdout, stderr)
-    return stdout, stderr
-
-
-class PymolError(Exception):
-    def __init__(self, returncode, stdout, stderr):
-        Exception.__init__(self, "error running pymol: %d %s"
-                           % (returncode, stderr))
-        self.returncode = returncode
-        self.stdout = stdout
-        self.stderr = stderr
 
 
 def random_subseq_idx(seq_len, sub_len):
