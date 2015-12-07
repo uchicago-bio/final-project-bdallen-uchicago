@@ -185,6 +185,23 @@ class StructuralAlign(object):
         soup2x.transform(v3.translation(solution.center2))
         return soup2x
 
+    def get_combined_soup(self, solution=None):
+        """
+        Get a transformed copy of soup2 based on the best alignment,
+        so it will align with unchanged soup1, combined with soup1.
+
+        Hacks the chain ids of soup2 from A, B, C... to Z, Y, X..., assuming
+        that both soups will be using the same chain id and it will be
+        useful to distinguish them in visualizations.
+        """
+        soup2x = self.get_transformed_soup2(solution)
+        soup1x = self.soup1.copy()
+        for res in soup1x.residues():
+            # A->Z, B->Y, etc
+            res.set_chain_id(chr(ord("Z") - (ord(res.chain_id) - ord("A"))))
+        soup2x.insert_soup(soup2x.n_residue(), soup1x)
+        return soup2x
+
 
 class AtomPosition(object):
     """
