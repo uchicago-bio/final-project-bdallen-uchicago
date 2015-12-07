@@ -31,17 +31,20 @@ class StructuralAlign(object):
     infeasible.
 
     @param local_segment: align subsets of this length
+    @param residues1: use this subset of residues from the soup instead of
+                      using the standard C atom for each residue
     """
-    def __init__(self, soup1, soup2, local_segment=None):
+    def __init__(self, soup1, soup2, local_segment=None,
+                 atoms1=None, atoms2=None):
         self.soup1 = soup1
         self.soup2 = soup2
         self.local_segment = local_segment
 
-        self.residues1 = get_residue_positions(soup1)
-        self.residues2 = get_residue_positions(soup2)
+        self.atoms1 = atoms1 or get_ca_atom_positions(soup1)
+        self.atoms2 = atoms2 or get_ca_atom_positions(soup2)
 
-        self.len1 = len(self.residues1)
-        self.len2 = len(self.residues2)
+        self.len1 = len(self.atoms1)
+        self.len2 = len(self.atoms2)
 
         if self.local_segment is not None:
             self.align_len = self.local_segment
@@ -60,8 +63,8 @@ class StructuralAlign(object):
         """
         Order preserving RMSD by residue numbers.
         """
-        res1 = [r for r in self.residues1 if r.i in idx_set1]
-        res2 = [r for r in self.residues2 if r.i in idx_set2]
+        res1 = [r for r in self.atoms1 if r.i in idx_set1]
+        res2 = [r for r in self.atoms2 if r.i in idx_set2]
         return self._rmsd_rot_res(res1, res2)
 
     def _rmsd_rot_res(self, res1, res2):
@@ -125,8 +128,8 @@ class StructuralAlign(object):
         """
         Try all possible conserved alignments, or optionally a slice of the
         total possibilities for use with multiprocessing. Does not preserve
-        residue order, and not all residues can be matched so it will typical
-        exclude many residues.
+        residue order, and not all atoms can be matched so it will typical
+        exclude many atoms.
 
         Note: ignores local_segment.
         """
@@ -134,8 +137,8 @@ class StructuralAlign(object):
         # process, but reduces the data that needs to be sent via IPC
         # and this is not a significant portion of the total work for
         # soups of typical size.
-        total, it = iter_residues_for_conserved_alignment(self.residues1,
-                                                          self.residues2)
+        total, it = iter_residues_for_conserved_alignment(self.atoms1,
+                                                          self.atoms2)
         if start > 0 or stop is not None:
             it = itertools.islice(it, start, stop)
 
@@ -183,16 +186,18 @@ class StructuralAlign(object):
         return soup2x
 
 
-class ResiduePosition(object):
+class AtomPosition(object):
     """
-    @ivar i: index in sequence of all peptide residues with CA atoms
+    @ivar i: index in sequence of all atoms
     @ivar residue_name: three letter code for the residue
+    @ivar atom_name: three letter code for the residue
     @ivar position: position vector of center of mass (CA atom) of the
                     residue, as a v3 vector
     """
-    def __init__(self, i, residue_type, position):
+    def __init__(self, i, residue_type, atom_name, position):
         self.i = i
         self.residue_type = residue_type
+        self.atom_name = atom_name
         self.position = position
         self.letter = res_name_to_char.get(residue_type)
         if self.letter in (None, "<", ">"):
@@ -206,7 +211,8 @@ class ResiduePosition(object):
         return v3.transform(matrix, self.position)
 
     def __repr__(self):
-        return ("<ResiduePosition %d %s>" % (self.i, self.residue_type))
+        return ("<AtomPosition %d %s %s>" % (self.i, self.residue_type,
+                                             self.atom_name))
 
 
 class StructuralAlignSolution(object):
@@ -288,8 +294,8 @@ def _main():
         best_random.print_multiline()
     if args.conserved:
         ncpus = multiprocessing.cpu_count()
-        total, it = iter_residues_for_conserved_alignment(sa.residues1,
-                                                          sa.residues2)
+        total, it = iter_residues_for_conserved_alignment(sa.atoms1,
+                                                          sa.atoms2)
         per_job = int(math.ceil(float(total) / ncpus))
         jobs = [(sa, start, start + per_job)
                 for start in xrange(0, total, per_job)]
@@ -376,7 +382,11 @@ def _pdbname(path):
     return os.path.splitext(os.path.basename(path))[0]
 
 
-def get_residue_positions(soup):
+def get_ca_atom_positions(soup):
+    """
+    Get CA atom positions for all residues in a soup. Ignores residues that
+    don't have a CA atom.
+    """
     rps = []
     for r in soup.residues():
         try:
@@ -385,7 +395,7 @@ def get_residue_positions(soup):
             or r.type in ("NME", "ACE")):
                 raise ValueError("ERR: unexpected residue with CA (%s %s)",
                                  (r.type, r.tag))
-            rp = ResiduePosition(len(rps), r.type, ca_atom.pos)
+            rp = AtomPosition(len(rps), r.type, "CA", ca_atom.pos)
             rps.append(rp)
         except KeyError:
             pass
