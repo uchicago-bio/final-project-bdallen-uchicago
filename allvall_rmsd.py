@@ -42,7 +42,7 @@ def rmsd_all(pdb_path, pdb_list, atom_list, outdir):
             coords2 = get_atom_coords(soup2, atom_list)
             center2, coords2 = center_vlist(coords2)
             score, rot_matrix = rmsd.calc_rmsd_rot(coords1, coords2)
-            out.write("%s %s %f\n" % (pdb_name1, pdb_name2, score))
+            out.write("%0.6f %s %s\n" % (score, pdb_name1, pdb_name2))
 
 
 def get_atom_coords(soup, atom_list):
