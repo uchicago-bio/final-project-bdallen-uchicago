@@ -4,6 +4,12 @@ Compute pairwise RMSD of all pdbs listed in the input file, restricting
 the calculation to the atoms provided in the second argument, which must
 be present in all pdbs. Designed to be used in conjunction with
 the "ALL" atom list from calc_presenting_surface.py.
+
+Usage:
+
+ find /path/to/project-data -name '*_complex_0001.pdb' > pdb_list.txt
+ ./allvall_rmsd.py pdb_list.txt atom_list.txt output/
+
 """
 
 import sys
