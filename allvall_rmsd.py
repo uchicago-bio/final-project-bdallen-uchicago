@@ -31,7 +31,7 @@ def rmsd_all(pdb_path, pdb_list, atom_list, outdir):
             # 1/3600 of total work anyway
             #if pdb_path2 == pdb_path:
             #    continue
-            pdb_name2 = get_pdb_name(pdb_path)
+            pdb_name2 = get_pdb_name(pdb_path2)
             soup2 = pdbatoms.Soup(pdb_path2)
             coords2 = get_atom_coords(soup2, atom_list)
             center2, coords2 = center_vlist(coords2)
@@ -64,7 +64,7 @@ def center_vlist(vlist):
 def _job_rmsd_all(args):
     try:
         return rmsd_all(*args)
-    except:
+    except Exception:
         traceback.print_exc()
         raise
 
