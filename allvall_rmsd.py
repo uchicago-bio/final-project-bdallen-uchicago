@@ -20,7 +20,7 @@ import traceback
 from pdbremix import pdbatoms, rmsd, v3
 
 
-def rmsd_all(pdb_path, pdb_list, atom_list, outdir):
+def rmsd_all(i, pdb_path, pdb_list, atom_list, outdir):
     """
     Compute RMSD between pdb_path and every pdb in pdb_list, writing output
     to outpath/rmsd_{basename(pdb_path)}.txt, and restricting the comparison
@@ -32,11 +32,8 @@ def rmsd_all(pdb_path, pdb_list, atom_list, outdir):
     center1, coords1 = center_vlist(coords1)
     outpath = os.path.join(outdir, "rmsd_%s.txt" % pdb_name1)
     with open(outpath, "w") as out:
-        for pdb_path2 in pdb_list:
-            # leave self v self in as a sanity check, it's only
-            # 1/3600 of total work anyway
-            #if pdb_path2 == pdb_path:
-            #    continue
+        for pdb_path2 in pdb_list[i+1:]:
+            assert pdb_path2 != pdb_path
             pdb_name2 = get_pdb_name(pdb_path2)
             soup2 = pdbatoms.Soup(pdb_path2)
             coords2 = get_atom_coords(soup2, atom_list)
@@ -101,7 +98,8 @@ def _main():
 
     outdir = sys.argv[3]
 
-    jobs = [(pdb_path, pdb_list, atom_list, outdir) for pdb_path in pdb_list]
+    jobs = [(i, pdb_path, pdb_list, atom_list, outdir)
+            for i, pdb_path in enumerate(pdb_list)]
 
     ncpus = multiprocessing.cpu_count()
     pool = multiprocessing.Pool(ncpus)
